@@ -1,13 +1,37 @@
 #include <stdio.h>
+#include <conio.h>
 
 CADASTRARVEICULO(){
-	char v[7][15] = {"Renavan", "Marca", "Modelo", "Placa", "Ano","Combustivel","Cor","Categoria"}; 
+	struct veiculo
+  {
+    char renavan[12];
+	char marca[30];
+    char modelo[30];
+    char placa[10];
+    int ano;
+    char combustivel[10];
+    char cor[15];
+    char categoria[12];  
+  };
+  
+  struct veiculo carro;
+	char v[8][15] = {"Renavan", "Marca", "Modelo", "Placa", "Ano","Combustivel","Cor","Categoria"}; 
 	char categoria[3][15] = {"economica","intermediaria","luxo"};
 	char comb[3][15] = {"flex","gasolina","etanol"};
-	printf("Preencha os seguintes campos:\n");
+	printf("Informe o Renavam:\n");
 	fflush(stdin); 
-    fgets(veiculo.disciplina, 40, stdin);
-	
+	fgets(carro.renavan, 12, stdin);
+		printf("Informe o Marca:\n");
+	fflush(stdin); 
+	fgets(carro.renavan, 12, stdin);
+		printf("Informe o Modelo:\n");
+	fflush(stdin); 
+	fgets(carro.renavan, 12, stdin);
+		printf("Informe o placa:\n");
+	fflush(stdin); 
+	fgets(carro.renavan, 12, stdin);
+	printf("renavan: %s",carro.renavan);
+	getch();
 }
 
 CADASTRARCLIENTE(){
@@ -20,13 +44,10 @@ LOCACAO(){
 DEVOLUCAO(){
 	printf("devolucao");
 }
-struct categoria
-	{
-		
-	}
 struct veiculo
   {
-    char marca[50];
+    int renavan;
+	char marca[50];
     char modelo[30];
     char placa[10];
     int ano;
@@ -35,7 +56,7 @@ struct veiculo
     char categoria[12];  
   };
   
-  struct veiculo veiculo[10];
+  struct veiculo carro[10];
 
 struct cliente
   {
@@ -49,7 +70,6 @@ struct cliente
     char categoria[12];  
   };
   
-  struct veiculo veiculo;  
 
 int main(){
 	int opcao;
