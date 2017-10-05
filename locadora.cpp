@@ -13,7 +13,10 @@ void CONSULTARVEICULO();
 void CADASTRARCLIENTE();
 void LOCACAO();
 void DEVOLUCAO();
+void MENUCONSULTA();
 void MOSTRARTODOS();
+void MOSTRAR_DISPONIVEIS();
+void MOSTRAR_POR_CATEGORIA();
 /*############################# STRUCTS ############################# */
 struct Veiculo{
     	char renavan[12];
@@ -47,11 +50,49 @@ int main(){
 }
 
 /*############################# PROCEDURES ############################# */
-
+void MOSTRAR_DISPONIVEIS(int categoria){
+	return;
+}
+void MOSTRAR_POR_CATEGORIA(){
+	int op;
+	char categoria[15];
+	printf("Categoria: ");
+	printf("Informe a Categoria: \n\n\t1- ECONOMICA\n\t2- INTERMEDIARIA \n\t3- LUXO\n");
+	scanf("%d",&op);
+	MOSTRAR_POR_CATEGORIA(op);
+}
+void MENUCONSULTAR(){
+	int opcao;
+	system("cls");
+	printf("Informe a opcao desejada: \n\n\t1- DISPONIVEIS\n\t2- DISPONIVEIS POR CATEGORIA \n\t3- MOSTRAR TODOS\n");
+	scanf("%i",&opcao);
+	switch(opcao){
+		case 1:
+			 system("cls");
+			 MOSTRAR_DISPONIVEIS();
+			 main();
+			 break;
+		case 2:
+			 system("cls");
+			 printf("Informe a Categoria: \n\n\t1- ECONOMICA\n\t2- INTERMEDIARIA \n\t3- LUXO\n");
+			 main();
+			 break;
+		case 3:
+			 system("cls");
+			 MOSTRARTODOS();
+			 main();
+			 break;
+		default:
+			system("cls");
+			printf("Opcao Invalida.");
+			main();
+			break;
+	}
+}
 void MENU(){
 	int opcao;
 	system("cls");
-	printf("Informe a opcao desejada: \n\t1- CADASTRAR VEICULO\n\t2- CADASTRAR CLIENTE \n\t3- LOCAR VEICULO \n\t4- DEVOLUCAO\n\t5- CONSULTAR VEICULO\n");
+	printf("Informe a opcao desejada: \n\n\t1- CADASTRAR VEICULO\n\t2- CADASTRAR CLIENTE \n\t3- LOCAR VEICULO \n\t4- DEVOLUCAO\n\t5- CONSULTAR VEICULO\n");
 	scanf("%i",&opcao);
 	switch(opcao){
 		case 1:
@@ -76,7 +117,7 @@ void MENU(){
 			 break;
 		case 5:
 			system("cls");
-			MOSTRARTODOS();
+			MENUCONSULTAR();
 			main();
 		default:
 			system("cls");
