@@ -2,6 +2,20 @@
 #include <conio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+
+/*############################# GLOBAIS ############################# */
+typedef struct {
+	int dia;
+	int mes;
+	int ano;
+} Data_2;
+
+int bissexto (int ano);
+unsigned long dist_dias (Data_2 inicio, Data_2 fim);
+
+int dias_mes[2][13] = {{0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+                       {0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
 
 FILE *arquivo;
 
@@ -15,54 +29,455 @@ void LOCACAO();
 void DEVOLUCAO();
 void MENUCONSULTA();
 void MOSTRARTODOS();
-void MOSTRAR_DISPONIVEIS();
-void MOSTRAR_POR_CATEGORIA();
-/*############################# STRUCTS ############################# */
+void EXIBIRCLIENTE(int opcao);
+void LOCARVEICULO();
+void EXIBIRCLIENTELOC(char categoria[15]);
+bool VALIDACLIENTE(char cpf[15]);
+bool VALIDAVEICULOLOC(char placa[9]);
+////void MOSTRAR_DISPONIVEIS();
+void MOSTRAR_POR_CATEGORIA(int op);
+int VALIDA_DATA(int dia, int mes, int ano);
+int CALCULARDIAS();
+int BISSEXTO (int ano);
+/*############################# STRUCTS! ############################# */
+struct Data{
+	int dia;
+	int mes;
+	int ano;
+};
+
+typedef struct Data date;
+
 struct Veiculo{
-    	char renavan[12];
-		char marca[30];
-    	char modelo[30];
-    	char placa[10];
-    	int ano;
-    	char combustivel[10];
-    	char cor[15];
-    	char categoria[12];  
-  	};
-   	
-
-
-struct cliente
-  {
-    char nome[100];
-    char nasc[10];
+    char renavan[12];
+	char marca[30];
     char modelo[30];
     char placa[10];
     int ano;
     char combustivel[10];
     char cor[15];
-    char categoria[12];  
-  };
+    char categoria[15];  
+    char cpfcliente[15];
+    date dt_ini;
+    date dt_fim;
+};
+   	
+struct Cliente{
+    char nome[100];
+    date nasc;
+    char rg[10];
+    char cpf[15];
+    char nacionalidade[20];
+    char cnh[20];
+    date validadecnh;
+};
 
 /*############################# MENU PRINCIPAL ############################# */
 
 int main(){
+	
 	MENU();
 }
 
 /*############################# PROCEDURES ############################# */
-void MOSTRAR_DISPONIVEIS(int categoria){
-	return;
-}
-void MOSTRAR_POR_CATEGORIA(){
-	int op;
+bool VALIDAVEICULOLOC(char placa[9]){
+	int reg;
+	struct Veiculo veiculo;
 	char categoria[15];
-	printf("Categoria: ");
-	printf("Informe a Categoria: \n\n\t1- ECONOMICA\n\t2- INTERMEDIARIA \n\t3- LUXO\n");
-	scanf("%d",&op);
-	MOSTRAR_POR_CATEGORIA(op);
+	char *substring;
+	bool found, verificacao = false;
+	int igual;	
+	if( (arquivo = fopen("veiculo.dat","r+b"))==NULL){
+		printf("Erro ao abrir arquivo cliente.dat.\n");
+		system("pause");
+		exit(1);
+	}
+	while(!feof(arquivo)){
+		if(fread(&veiculo,sizeof(struct Veiculo),1, arquivo) == 1){
+			//substring = strstr(strupr(veiculo.placa),strupr(placa));
+			igual = stricmp(placa,strtok(veiculo.placa,"\n"));
+		if (igual == 0){
+				verificacao = true;
+				break;
+			}			 
+		}
+	}
+	if (!verificacao){
+		found = false;
+	}else{
+		found = true;
+	}
+	fclose(arquivo);	
+	return found;
 }
-void MENUCONSULTAR(){
+
+bool VALIDACLIENTE(char cpf[15]){
+	int reg,igual;
+	struct Cliente cliente;
+	bool verificacao = false;
+	char *substring = NULL;
+	
+	if( (arquivo = fopen("cliente.dat","r+b"))==NULL){
+		printf("Erro ao abrir arquivo cliente.dat.\n");
+		system("pause");
+		exit(1);
+	}
+	while(!feof(arquivo)){
+		if(fread(&cliente,sizeof(struct Cliente),1, arquivo) == 1){
+			//substring = strstr(strupr(cliente.cpf),strupr(cpf));
+			igual = stricmp(cpf,strtok(cliente.cpf,"\n"));
+		if (igual == 0){
+				system("pause");
+				verificacao = true;
+				break;
+			}			 
+		}
+	}
+	fclose(arquivo);
+	return verificacao;
+}
+
+void LOCARVEICULO(){
+	struct Veiculo veiculo;
+	date dt_ini;
+	date dt_fim;
+	char *substring;
+	bool verificacao = false;
+	int  cont = 0;
+	int  valida,op;
+	char placa[9];
+	char cpf[15],categoria[15];
+	bool continuar = true;
+	do{
+		printf("Informe a Categoria: \n\n\t1- ECONOMICA\n\t2- INTERMEDIARIA \n\t3- LUXO\n\t4- TODOS\n");
+		scanf("%d",&op);
+		system("cls");
+		switch(op){
+			case 1:
+				strcpy(categoria,"economica");
+				EXIBIRCLIENTELOC(categoria);
+				break;
+			case 2:
+				strcpy(categoria,"intermediaria");
+				EXIBIRCLIENTELOC(categoria);
+				break;
+			case 3:
+				strcpy(categoria,"luxo");
+				EXIBIRCLIENTELOC(categoria);
+				break;
+			case 4:
+				strcpy(categoria,"todos");
+				EXIBIRCLIENTELOC(categoria);
+				break;
+			default:
+				system("cls");
+				printf("Opcao invalida");
+				system("pause");
+				return;
+		}
+		printf("\nInforme a placa ou sair para cancelar: ");
+		fflush(stdin); 
+		fgets(placa, 9, stdin);
+		if(strcmp(strtok(placa,"\n"),"sair") == 0){
+			return;
+		}
+		if (!VALIDAVEICULOLOC(placa)){
+			printf("Veiculo nao disponivel ou nao cadastrado, refaca a operacao.\n");
+			system("pause");
+			return;
+		}
+		printf("\nInforme o CPF ou sair para cancelar: ");
+		fflush(stdin); 
+	 	fgets(cpf, 15, stdin);
+		if(strcmp(strtok(cpf,"\n"),"sair") == 0){
+			return;
+		}
+		if (!VALIDACLIENTE(strtok(cpf,"\n"))){
+			printf("Cliente nao cadastrado, refaca a operacao.\n");
+			system("pause");
+			return;
+		}else
+			break;
+	}while(true);
+	
+	printf("Coloque data incial no formato: dia/mes/ano\n");
+	scanf("%d/%d/%d", &dt_ini.dia, &dt_ini.mes, &dt_ini.ano);
+	printf("Coloque data final no formato: dia/mes/ano\n");
+	scanf("%d/%d/%d", &dt_fim.dia, &dt_fim.mes, &dt_fim.ano);
+	
+	if( (arquivo = fopen("veiculo.dat","r+b"))==NULL){
+		printf("Erro ao abrir arquivo cliente.dat.\n");
+		system("pause");
+		exit(1);
+	}
+	while(!feof(arquivo)){
+		if(fread(&veiculo,sizeof(struct Veiculo),1, arquivo) == 1){
+			substring = strstr(strupr(veiculo.placa),strupr(placa));
+		if (substring != NULL){
+				verificacao = true;
+				break;
+			}			 
+		}
+		cont++;
+	}
+	if (!verificacao){
+		printf("\nVeiculo nao encontrado => %d.",cont);
+	}else{
+		strcpy(veiculo.cpfcliente,cpf);
+		
+		veiculo.dt_ini.dia = dt_ini.dia;
+		veiculo.dt_ini.mes = dt_ini.mes;
+		veiculo.dt_ini.ano = dt_ini.ano;
+		
+		veiculo.dt_fim.dia = dt_fim.dia;
+		veiculo.dt_fim.mes = dt_fim.mes;
+		veiculo.dt_fim.ano = dt_fim.ano;
+		
+		fseek(arquivo, sizeof(struct Veiculo) * cont, SEEK_SET);
+		fwrite(&veiculo, sizeof(struct Veiculo), 1, arquivo);
+		printf("\nAtualizado com sucesso pressione qualquer tecla para continuar\n\n.");
+		getch();
+	}
+	fclose(arquivo);	
+}
+
+void LOCACAO(){
+	printf("locacao");
+	getch();
+}
+
+void EXIBIRCLIENTE(int opcao){
+	int reg;
+	char cpf[15];
+	struct Cliente cliente;
+	system("cls");
+	
+	if((arquivo = fopen("cliente.dat","rb")) == NULL){
+		printf("ERRO AO ABRIR ARQUIVO");
+		system("pause");
+		exit(0);
+	}
+	// posiciona o arquivo no inicio
+	fseek(arquivo,0,SEEK_SET);
+	
+	reg=0;
+	if(opcao == 1){
+		do {
+		// le registro
+		fread(&cliente, sizeof(struct Cliente), 1, arquivo);
+		
+		// se chegou ao fim, para
+		if (feof(arquivo)) break;
+		
+		// mostra dados
+		printf ("--------------------------------\n");
+		printf ("Registro numero: %d\n\n",reg);
+		printf ("NOME: %s",cliente.nome);
+		printf ("NASCIMENTO: %d/%d/%d",cliente.nasc.dia,cliente.nasc.mes,cliente.nasc.ano);
+		printf ("\nRG: %s",cliente.rg);
+		printf ("CPF: %s",cliente.cpf);
+		printf ("NACIONALIDADE: %s",cliente.nacionalidade);
+		printf ("REGISTRO CNH:  %s",cliente.cnh);		
+		printf ("VALIDADE CNH: %d/%d/%d",cliente.validadecnh.dia,cliente.validadecnh.mes,cliente.validadecnh.ano);
+		printf ("\n--------------------------------\n");		
+		reg++;
+	} while(!feof(arquivo)); // repete enquanto nao chegar ao fim
+	}else{
+		printf("Informe o CPF: ");
+		fflush(stdin); 
+	    fgets(cpf, 15, stdin);
+	    system("cls");
+	    do {
+		// le registro
+		fread(&cliente, sizeof(struct Cliente), 1, arquivo);
+		
+		// se chegou ao fim, para
+		if (feof(arquivo)) break;
+		
+		// mostra dados
+		if (strcmp(cpf,cliente.cpf) == 0){
+	    	printf ("--------------------------------\n");
+			printf ("Registro numero: %d\n\n",reg);
+			printf ("NOME: %s",cliente.nome);
+			printf ("NASCIMENTO: %d/%d/%d",cliente.nasc.dia,cliente.nasc.mes,cliente.nasc.ano);
+			printf ("\nRG: %s",cliente.rg);
+			printf ("CPF: %s",cliente.cpf);
+			printf ("NACIONALIDADE: %s",cliente.nacionalidade);
+			printf ("REGISTRO CNH:  %s",cliente.cnh);		
+			printf ("VALIDADE CNH: %d/%d/%d",cliente.validadecnh.dia,cliente.validadecnh.mes,cliente.validadecnh.ano);
+			printf ("\n--------------------------------\n");
+			reg++;
+		}
+		}while(!feof(arquivo)); // repete enquanto nao chegar ao fim
+	}
+	fclose(arquivo);
+	getch();
+}
+
+void EXIBIRCLIENTELOC(char categoria[15]){
+	int reg;
+	char nome[100], cpf[15], modelo[20], placa[9];
+	struct Cliente cliente;
+	struct Veiculo carro;
+	if((arquivo = fopen("cliente.dat","rb")) == NULL){
+		printf("ERRO AO ABRIR ARQUIVO");
+		system("pause");
+		exit(0);
+	}
+	// posiciona o arquivo no inicio
+	fseek(arquivo,0,SEEK_SET);	
+	reg=0;
+	printf ("-----------Clientes Cadastrados------------------\n");
+	do {
+		// le registro
+		fread(&cliente, sizeof(struct Cliente), 1, arquivo);
+		
+		// se chegou ao fim, para
+		if (feof(arquivo)) break;
+		strcpy(nome,cliente.nome);
+		strcpy(cpf,cliente.cpf);
+		// mostra dados
+		strtok(nome,"\n");
+		strtok(cpf,"\n");
+		printf ("NOME: %s ",nome);
+		printf ("| CPF: %s\n",cpf);
+		reg++;
+	} while(!feof(arquivo)); // repete enquanto nao chegar ao fim
+	fclose(arquivo);
+	if((arquivo = fopen("veiculo.dat","rb")) == NULL){
+		printf("ERRO AO ABRIR ARQUIVO");
+		system("pause");
+		exit(0);
+	}
+	// posiciona o arquivo no inicio
+	fseek(arquivo,0,SEEK_SET);
+	reg=0;
+	printf ("\n########### Veiculos Disponiveis - %s ###########\n\n",categoria);
+	while(!feof(arquivo)){
+		// le registro
+		fread(&carro, sizeof(struct Veiculo), 1, arquivo);		
+		// se chegou ao fim, para
+		if (feof(arquivo)) break;
+		// mostra dados
+		if (strcmp (categoria,carro.categoria) == 0 && strcmp ("disponivel",carro.cpfcliente) == 0){
+			reg++;
+			strcpy(modelo,carro.modelo);
+			strcpy(placa,carro.placa);
+			strtok(modelo,"\n");
+			strtok(placa,"\n");
+			printf ("%d -> MODELO: %s",reg,modelo);
+			printf (" | PLACA: %s\n",placa);
+		}else if (strcmp ("disponivel",carro.cpfcliente) == 0 && strcmp ("todos",categoria) == 0){
+			reg++;
+			strcpy(modelo,carro.modelo);
+			strcpy(placa,carro.placa);
+			strtok(modelo,"\n");
+			strtok(placa,"\n");
+			printf ("%d -> MODELO: %s",reg,modelo);
+			printf (" | PLACA: %s\n",placa);
+		}
+	}
+	printf ("\n#####################\n");	
+	fclose(arquivo);
+	//getch();
+}
+
+void MOSTRAR_DISPONIVEIS(){
+	int reg;
+	struct Veiculo carro;
+	char categoria[15];
+	int cont = 0; 
+	system("cls");
+	if((arquivo = fopen("veiculo.dat","rb")) == NULL){
+		printf("ERRO AO ABRIR ARQUIVO");
+		system("pause");
+		exit(0);
+	}
+	// posiciona o arquivo no inicio
+	fseek(arquivo,0,SEEK_SET);
+	reg=0;
+	do {
+		// le registro
+		fread(&carro, sizeof(struct Veiculo), 1, arquivo);		
+		// se chegou ao fim, para
+		if (feof(arquivo)) break;
+		// mostra dados
+		if (strcmp("disponivel",carro.cpfcliente) == 0){
+			cont++;
+			printf ("--------------------------------\n");
+			printf ("Registro numero: %d\n\n",reg);
+			printf ("RENAVAN: %s",carro.renavan);
+			printf ("MARCA: %s",carro.marca);
+			printf ("MODELO: %s",carro.modelo);
+			printf ("PLACA: %s",carro.placa);
+			printf ("ANO: %d\n",carro.ano);
+			printf ("COMBUSTIVEL: %s\n",carro.combustivel);		
+			printf ("COR: %s",carro.cor);
+			printf ("CATEGORIA: %s\n",carro.categoria);
+			printf ("--------------------------------\n");	
+			reg++;
+		}
+	} while(!feof(arquivo)); // repete enquanto nao chegar ao fim
+	if (cont == 0){
+		printf("Nao ha veiculos disponiveis.");
+	}
+	fclose(arquivo);
+	getch();
+}
+
+void MOSTRAR_POR_CATEGORIA(int op){
+	int reg;
+	struct Veiculo carro;
+	char categoria[15];
+	
+	if (op == 1){
+		strcpy(categoria,"economica");
+	}
+	else if (op == 2){
+		strcpy(categoria,"intermediaria");
+	}
+	else{
+		strcpy(categoria,"luxo");
+	}
+		
+	if((arquivo = fopen("veiculo.dat","rb")) == NULL){
+		printf("ERRO AO ABRIR ARQUIVO");
+		system("pause");
+		exit(0);
+	}
+	// posiciona o arquivo no inicio
+	fseek(arquivo,0,SEEK_SET);
+	
+	reg=0;
+	do {
+		// le registro
+		fread(&carro, sizeof(struct Veiculo), 1, arquivo);		
+		// se chegou ao fim, para
+		if (feof(arquivo)) break;
+		// mostra dados
+		if (strcmp (categoria,carro.categoria) == 0 && strcmp ("disponivel",carro.cpfcliente) == 0){
+			system("cls");
+			printf ("--------------------------------\n");
+			printf ("Registro numero: %d\n\n",reg);
+			printf ("RENAVAN: %s",carro.renavan);
+			printf ("MARCA: %s",carro.marca);
+			printf ("MODELO: %s",carro.modelo);
+			printf ("PLACA: %s",carro.placa);
+			printf ("ANO: %d\n",carro.ano);
+			printf ("COMBUSTIVEL: %s\n",carro.combustivel);		
+			printf ("COR: %s",carro.cor);
+			printf ("CATEGORIA: %s\n",carro.categoria);
+			printf ("--------------------------------\n");	
+			reg++;
+		}
+	} while(!feof(arquivo)); // repete enquanto nao chegar ao fim
+	fclose(arquivo);
+	getch();
+}
+
+void MENUCONSULTARVEICULO(){
 	int opcao;
+	int opcao2;
 	system("cls");
 	printf("Informe a opcao desejada: \n\n\t1- DISPONIVEIS\n\t2- DISPONIVEIS POR CATEGORIA \n\t3- MOSTRAR TODOS\n");
 	scanf("%i",&opcao);
@@ -75,7 +490,8 @@ void MENUCONSULTAR(){
 		case 2:
 			 system("cls");
 			 printf("Informe a Categoria: \n\n\t1- ECONOMICA\n\t2- INTERMEDIARIA \n\t3- LUXO\n");
-			 main();
+			 scanf("%d",&opcao2);
+			 MOSTRAR_POR_CATEGORIA(opcao2);
 			 break;
 		case 3:
 			 system("cls");
@@ -85,14 +501,38 @@ void MENUCONSULTAR(){
 		default:
 			system("cls");
 			printf("Opcao Invalida.");
-			main();
-			break;
+			return;
 	}
 }
+void MENUCONSULTARCLIENTE(){
+	int opcao;
+	int opcao2;
+	system("cls");
+	printf("Informe a opcao desejada: \n\n\t1- TODOS\n\t2- POR CPF\n");
+	scanf("%i",&opcao);
+	switch(opcao){
+		case 1:
+			 system("cls");
+			 EXIBIRCLIENTE(opcao);
+			 main();
+			 break;
+		case 2:
+			 system("cls");
+			 EXIBIRCLIENTE(opcao);
+			 break;
+		default:
+			system("cls");
+			printf("Opcao Invalida.");
+			return;
+	}
+}
+
 void MENU(){
 	int opcao;
+	char placa[9];
+	char cpf[15];
 	system("cls");
-	printf("Informe a opcao desejada: \n\n\t1- CADASTRAR VEICULO\n\t2- CADASTRAR CLIENTE \n\t3- LOCAR VEICULO \n\t4- DEVOLUCAO\n\t5- CONSULTAR VEICULO\n");
+	printf("Informe a opcao desejada: \n\n\t1- CADASTRAR VEICULO\n\t2- CADASTRAR CLIENTE \n\t3- LOCAR VEICULO \n\t4- DEVOLUCAO\n\t5- CONSULTAR VEICULO\n\t6- CONSULTAR CLIENTE\n");
 	scanf("%i",&opcao);
 	switch(opcao){
 		case 1:
@@ -107,7 +547,7 @@ void MENU(){
 			 break;
 		case 3:
 			 system("cls");
-			 LOCACAO();
+			 LOCARVEICULO();
 			 main();
 			 break;
 		case 4:
@@ -117,13 +557,16 @@ void MENU(){
 			 break;
 		case 5:
 			system("cls");
-			MENUCONSULTAR();
+			MENUCONSULTARVEICULO();
+			main();
+		case 6:
+			system("cls");
+			MENUCONSULTARCLIENTE();
 			main();
 		default:
 			system("cls");
 			printf("Opcao Invalida.");
-			main();
-			break;
+			return;
 	}
 }
 
@@ -134,8 +577,9 @@ void MOSTRARTODOS(){
 	
 	int reg;
 	struct Veiculo carro;
+	system("cls");
 	
-	if((arquivo = fopen("dados.dat","rb")) == NULL){
+	if((arquivo = fopen("veiculo.dat","rb")) == NULL){
 		printf("ERRO AO ABRIR ARQUIVO");
 		system("pause");
 		exit(0);
@@ -145,32 +589,37 @@ void MOSTRARTODOS(){
 	
 	reg=0;
 	do {
-	// le registro
-	fread(&carro, sizeof(struct Veiculo), 1, arquivo);
-	
-	// se chegou ao fim, para
-	if (feof(arquivo)) break;
-	
-	// mostra dados
-	printf ("Registro numero: %d\n\n",reg);
-	printf ("RENAVAN: %s",carro.renavan);
-	printf ("MARCA: %s",carro.marca);
-	printf ("MODELO: %s",carro.modelo);
-	printf ("PLACA: %s",carro.placa);
-	printf ("ANO: %d\n",carro.ano);
-	printf ("COMBUSTIVEL: %s\n",carro.combustivel);		
-	printf ("COR: %s",carro.cor);
-	printf ("CATEGORIA: %s\n",carro.categoria);
-	printf ("--------------------------------\n");
-	
-	reg++;
+		// le registro
+		fread(&carro, sizeof(struct Veiculo), 1, arquivo);
+		
+		// se chegou ao fim, para
+		if (feof(arquivo)) break;
+		
+		// mostra dados
+		printf ("--------------------------------\n");
+		printf ("Registro numero: %d\n\n",reg);
+		printf ("RENAVAN: %s",carro.renavan);
+		printf ("MARCA: %s",carro.marca);
+		printf ("MODELO: %s",carro.modelo);
+		printf ("PLACA: %s",carro.placa);
+		printf ("ANO: %d\n",carro.ano);
+		printf ("COMBUSTIVEL: %s\n",carro.combustivel);		
+		printf ("COR: %s",carro.cor);
+		printf ("CATEGORIA: %s\n",carro.categoria);
+		printf ("CLIENTE: %s\n",carro.cpfcliente);
+		printf("INICIO: %d/%d/%d\n",carro.dt_ini.dia,carro.dt_ini.mes,carro.dt_ini.ano);
+		printf("FIM: %d/%d/%d\n",carro.dt_fim.dia,carro.dt_fim.mes,carro.dt_fim.ano);
+		printf ("--------------------------------\n");
+		
+		reg++;
 	} while(!feof(arquivo)); // repete enquanto nao chegar ao fim
+	fclose(arquivo);
 	getch();
 }
 void CONSULTARVEICULO(){
     struct Veiculo carro[100];
     int i = 0;
-	if((arquivo = fopen("dados.dat","rb")) == NULL){
+	if((arquivo = fopen("veiculo.dat","rb")) == NULL){
 		printf("ERRO AO ABRIR ARQUIVO");
 		system("pause");
 		exit(0);
@@ -196,9 +645,9 @@ void CONSULTARVEICULO(){
 
 void CADASTRARVEICULO(){
    struct Veiculo carro;
-	int opcao01;
+	int opcao01,opc;
 	
-	if((arquivo = fopen("dados.dat","ab")) == NULL){
+	if((arquivo = fopen("veiculo.dat","ab")) == NULL){
 		printf("ERRO AO ABRIR ARQUIVO");
 		system("pause");
 		exit(0);
@@ -212,8 +661,8 @@ void CADASTRARVEICULO(){
 	fgets(carro.marca, 30, stdin);
 	
 	printf("Informe o Modelo:\n");
-	fflush(stdin); 
-	fgets(carro.modelo,30, stdin);
+	fflush(stdin); 	
+	fgets(carro.modelo, 30, stdin);
 	
 	printf("Informe o placa:\n");
 	fflush(stdin); 
@@ -225,18 +674,36 @@ void CADASTRARVEICULO(){
 	
 	printf("Informe o combustivel:\n1-flex\n2-gasolina\n3-etanol: ");
 	fflush(stdin); 
-	scanf("%d",&opcao01);
-	
-	switch(opcao01){
+	scanf("%d",&opc);
+	switch(opc){
 		case 1:
-			fflush(stdin); 
+			//fflush(stdin); 
 			strcpy(carro.combustivel,"flex");
 			break;
 		case 2:
+			//fflush(stdin); 
 			strcpy(carro.combustivel,"gasolina");
 			break;
 		case 3:
+			//fflush(stdin); 
 			strcpy(carro.combustivel,"etanol");
+			break;
+		default:
+			printf("Opcao Invalida.");
+			break;
+	}
+	
+	printf("Informe a categoria:\n1-economica\n2-intermediaria\n3-luxo: ");
+	scanf("%d",&opcao01);
+	switch(opcao01){
+		case 1:
+			strcpy(carro.categoria,"economica");
+			break;
+		case 2:
+			strcpy(carro.categoria,"intermediaria");
+			break; 
+		case 3:
+			strcpy(carro.categoria,"luxo");
 			break;
 		default:
 			printf("Opcao Invalida.");
@@ -247,27 +714,15 @@ void CADASTRARVEICULO(){
 	fflush(stdin); 
 	fgets(carro.cor, 15, stdin);
 	
-	printf("Informe a categoria:\n1-economica\n2-intermediaria\n3-luxo: ");
-	fflush(stdin); 
-	scanf("%d",&opcao01);
+	strcpy(carro.cpfcliente,"disponivel");
 	
-	switch(opcao01){
-		case 1:
-			fflush(stdin); 
-			strcpy(carro.categoria,"economica");
-			break;
-		case 2:
-			fflush(stdin); 
-			strcpy(carro.categoria,"intermediaria");
-			break;
-		case 3:
-			fflush(stdin); 
-			strcpy(carro.categoria,"luxo");
-			break;
-		default:
-			printf("Opcao Invalida.");
-			break;
-	}
+	carro.dt_ini.dia = NULL;
+	carro.dt_ini.mes = NULL;
+	carro.dt_ini.ano = NULL;
+	
+	carro.dt_fim.dia = NULL;
+	carro.dt_fim.mes = NULL;
+	carro.dt_fim.ano = NULL;
 	
 	if (fwrite(&carro,sizeof(struct Veiculo),1,arquivo) == 1){
 		system("cls");
@@ -283,15 +738,86 @@ void CADASTRARVEICULO(){
 /*###################################################*/
 
 void CADASTRARCLIENTE(){
-	printf("cliente");
+	struct Cliente cliente;
+	int dataok;
 	
+	if((arquivo = fopen("cliente.dat","ab")) == NULL){
+		printf("ERRO AO ABRIR ARQUIVO");
+		system("pause");
+		exit(0);
+	}
+
+	system("cls");
+	printf("Informe o Nome: ");
+	fflush(stdin); 
+	fgets(cliente.nome, 100, stdin);
+	
+	printf("\nInforme data Nascimento:\n");
+	do{
+		printf("DIA:");
+		fflush(stdin); 
+		scanf("%d",&cliente.nasc.dia);
+		printf("\nMES:");
+		fflush(stdin); 
+		scanf("%d",&cliente.nasc.mes);
+		printf("\nANO:");
+		fflush(stdin); 
+		scanf("%d",&cliente.nasc.ano);
+		dataok = VALIDA_DATA(cliente.nasc.dia,cliente.nasc.mes,cliente.nasc.ano);
+		if (dataok != 1){
+			printf("Data Inválida, pressione enter para informar novamente.");
+			system("pause");
+		}
+	}while(dataok != 1);
+	
+	printf("\nInforme o RG: ");
+    fflush(stdin); 
+	fgets(cliente.rg, 10, stdin);
+	
+	printf("\nInforme o CPF: ");
+    fflush(stdin); 
+	fgets(cliente.cpf, 15, stdin);
+	
+	printf("\nInforme a Nacionalidade: ");
+	fflush(stdin); 
+	fgets(cliente.nacionalidade, 20, stdin);
+	
+	printf("\nInforme o numero de registro da CNH: ");
+	fflush(stdin); 
+	fgets(cliente.cnh, 20, stdin);
+	
+	printf("\nInforme validade da CNH:\n");
+	do{
+		printf("DIA:");
+		fflush(stdin); 
+		scanf("%d",&cliente.validadecnh.dia);
+		printf("\nMES:");
+		fflush(stdin); 
+		scanf("%d",&cliente.validadecnh.mes);
+		printf("\nANO:");
+		fflush(stdin); 
+		scanf("%d",&cliente.validadecnh.ano);
+		dataok = VALIDA_DATA(cliente.validadecnh.dia,cliente.validadecnh.mes,cliente.validadecnh.ano);
+		if (dataok != 1){
+			printf("Data Inválida, pressione enter para informar novamente.");
+			system("pause");
+		}
+	}while(dataok != 1);
+		
+	if (fwrite(&cliente,sizeof(struct Cliente),1,arquivo) == 1){
+		system("cls");
+		printf("Cadastrado com Sucesso.\n");	
+		fclose(arquivo);
+		system("pause");	
+	}else{
+		system("cls");
+		printf("ERRO AO EFETUAR CADASTRO.\n");
+		fclose(arquivo);
+	}	
 }
 
 /*###################################################*/
 
-void LOCACAO(){
-	printf("Locacao"); 
-}
 
 /*###################################################*/
 
@@ -300,45 +826,80 @@ void DEVOLUCAO(){
 }
 
 
-/*############################# PROCEDURE MENU ############################# */  
+/*############################# VALIDA DATA ############################# */  
 
+int VALIDA_DATA(int dia, int mes, int ano)
+    {
+    if ((dia >= 1 && dia <= 31) && (mes >= 1 && mes <= 12) && (ano >= 1900 && ano <= 2100)) //verifica se os numeros sao validos
+        {
+            if ((dia == 29 && mes == 2) && ((ano % 4) == 0)) //verifica se o ano e bissexto
+            {
+                return 1;
+            }
+            if (dia <= 28 && mes == 2) //verifica o mes de feveireiro
+            {
+                return 1;
+            }
+            if ((dia <= 30) && (mes == 4 || mes == 6 || mes == 9 || mes == 11)) //verifica os meses de 30 dias
+            {
+                return 1;
+            }
+            if ((dia <=31) && (mes == 1 || mes == 3 || mes == 5 || mes == 7 || mes ==8 || mes == 10 || mes == 12)) //verifica os meses de 31 dias
+            {
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
+      }
+       else
+           {
+                return 0;
+           }
+}
 
+int CALCULARDIAS() {
+	Data_2 dia1, dia2;
 
+	printf("Coloque data incial no formato: dia/mes/ano\n");
+	scanf("%d/%d/%d", &dia1.dia, &dia1.mes, &dia1.ano);
+	printf("Coloque data final no formato: dia/mes/ano\n");
+	scanf("%d/%d/%d", &dia2.dia, &dia2.mes, &dia2.ano);
+	
+	//printf("A distancia em dias: %lu\n", dist_dias (dia1, dia2));
 
-//Criando a variável aluno que será do
-//     tipo struct ficha_de_aluno       
-//  struct ficha_de_aluno aluno;
-// 
-//  printf("\n---------- Cadastro de aluno -----------\n\n\n");
-//   
-//  printf("Nome do aluno ......: ");
-//  fflush(stdin); 
-// 
-//  /*usaremos o comando fgets() para ler strings, no caso o nome
-//   do aluno e a disciplina
-//   fgets(variavel, tamanho da string, entrada)
-//   como estamos lendo do teclado a entrada é stdin (entrada padrão),
-//   porém em outro caso, a entrada tambem poderia ser um arquivo  */
-// 
-//  fgets(aluno.nome, 40, stdin);
-//   
-//  printf("Disciplina ......: ");
-//  fflush(stdin); 
-//  fgets(aluno.disciplina, 40, stdin);
-//   
-//  printf("Informe a 1a. nota ..: ");
-//  scanf("%f", &aluno.nota_prova1);
-//   
-//  printf("Informe a 2a. nota ..: ");
-//  scanf("%f", &aluno.nota_prova2);  
-//   
-//  printf("\n\n --------- Lendo os dados da struct ---------\n\n");
-//  printf("Nome ...........: %s", aluno.nome);
-//  printf("Disciplina .....: %s", aluno.disciplina);
-//  printf("Nota da Prova 1 ...: %.2f\n" , aluno.nota_prova1);
-//  printf("Nota da Prova 2 ...: %.2f\n" , aluno.nota_prova2);
-//   
-//  getch();
-//  return(0);
-//} 
+	return dist_dias (dia1, dia2);
+}
+int BISSEXTO (int ano) {
+	return (ano % 4 == 0) && ((ano % 100 != 0) || (ano % 400 == 0));
+}
+
+/*
+ * Retorna a distancia entre inicio e fim em dias.
+ * Assume que inicio nao vem depois de fim.
+ */
+unsigned long dist_dias (Data_2 inicio, Data_2 fim) {
+	unsigned long idias, fdias;	/* guarda qtos dias tem da data */
+					/* ate o comeco do ano */
+	unsigned long def_anos = 0;	/* guarda diferenca entre anos das */
+					/* datas inicio e fim medida em dias */
+	register int i;
+	int dbissexto;
+
+	idias = inicio.dia;
+	dbissexto = BISSEXTO (inicio.ano);
+	for (i = inicio.mes - 1; i > 0; --i)
+		idias += dias_mes[dbissexto][i];
+
+	fdias = fim.dia;
+	dbissexto = BISSEXTO (fim.ano);
+	for (i = fim.mes - 1; i > 0; --i)
+		fdias += dias_mes[dbissexto][i];
+
+	while (inicio.ano < fim.ano)
+		def_anos += 365 + BISSEXTO(inicio.ano++);
+
+	return def_anos - idias + fdias;
+}
 
