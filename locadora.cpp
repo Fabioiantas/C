@@ -11,12 +11,18 @@ typedef struct {
 	int ano;
 } Data_2;
 
+struct Data{
+	int dia;
+	int mes;
+	int ano;
+};
+typedef struct Data date;
+
 int bissexto (int ano);
 unsigned long dist_dias (Data_2 inicio, Data_2 fim);
 
 int dias_mes[2][13] = {{0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
                        {0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
-
 FILE *arquivo;
 
 /*############################# PROTOTIPOS ############################# */
@@ -31,22 +37,17 @@ void MENUCONSULTA();
 void MOSTRARTODOS();
 void EXIBIRCLIENTE(int opcao);
 void LOCARVEICULO();
-void EXIBIRCLIENTELOC(char categoria[15]);
+int EXIBIRCLIENTELOC(char categoria[15]);
 bool VALIDACLIENTE(char cpf[15]);
 bool VALIDAVEICULOLOC(char placa[9]);
 ////void MOSTRAR_DISPONIVEIS();
 void MOSTRAR_POR_CATEGORIA(int op);
 int VALIDA_DATA(int dia, int mes, int ano);
-int CALCULARDIAS();
+int CALCULARDIAS(date dt_ini, date dt_fim);
 int BISSEXTO (int ano);
+float VALORTOTAL(char placa[9]);
 /*############################# STRUCTS! ############################# */
-struct Data{
-	int dia;
-	int mes;
-	int ano;
-};
 
-typedef struct Data date;
 
 struct Veiculo{
     char renavan[12];
@@ -80,13 +81,90 @@ int main(){
 }
 
 /*############################# PROCEDURES ############################# */
+void DEVOLUCAO(){
+	int op;
+	float total;
+	char placa[9];
+	printf("Informe a Opcao: \n\n\t1- INFORMAR PLACA\n\t2- MOSTRAR TODOS EM USO \n\t3- INFORMAR CPF\n");
+	scanf("%d",&op);
+	switch(op){
+		case 1:
+			printf("Informe a placa: ");
+			fflush(stdin);
+			fgets(placa,10,stdin);
+			if(VALIDAVEICULOLOC(strtok(placa,"\n"))){
+				system("cls");
+				printf("Veiculo nao cadastrado ou nao esta em uso.\n");
+				system("pause");
+				return;
+			}else{
+				//system("cls");
+				printf("total: %f",VALORTOTAL(placa));
+				system("pause");
+				return;
+			}
+			break;
+		case 2:
+			NULL;
+			break;
+		case 3:
+			NULL;
+			break;
+	}
+}
+
+float VALORTOTAL(char placa[9]){
+	float valor = 0;
+	int reg;
+	struct Veiculo veiculo;
+	char categoria[15];
+	char *substring;
+	bool found, verificacao = false;
+	int igual,iguald;	
+	Data_2 dt_i, dt_f;
+	float diaria;
+	int dias;
+	if( (arquivo = fopen("veiculo.dat","r+b"))==NULL){
+		printf("Erro ao abrir arquivo cliente.dat.\n");
+		system("pause");
+		exit(1);
+	}
+	while(!feof(arquivo)){
+		if(fread(&veiculo,sizeof(struct Veiculo),1, arquivo) == 1){
+			igual = stricmp(placa,strtok(veiculo.placa,"\n"));
+			if (igual == 0){
+				if(stricmp("economica",strtok(veiculo.categoria,"\n")) == 0){
+					diaria = 89.90;
+				}else if(stricmp("intermediaria",strtok(veiculo.categoria,"\n")) == 0){
+					diaria = 174.90;
+				}else if(stricmp("luxo",strtok(veiculo.categoria,"\n")) == 0){
+					diaria = 289.90;
+				}else
+					diaria = 0;
+				dt_i.dia = veiculo.dt_ini.dia;
+				dt_i.mes = veiculo.dt_ini.mes;
+				dt_i.ano = veiculo.dt_ini.ano;
+				
+				dt_f.dia = veiculo.dt_fim.dia;
+				dt_f.mes = veiculo.dt_fim.mes;
+				dt_f.ano = veiculo.dt_fim.ano;
+				dias = dist_dias(dt_i,dt_f);
+				system("cls");
+				printf("dias: %d",dias);
+				valor = dias * diaria;
+				break;
+			}			 
+		}
+	}
+	return valor;
+}
 bool VALIDAVEICULOLOC(char placa[9]){
 	int reg;
 	struct Veiculo veiculo;
 	char categoria[15];
 	char *substring;
 	bool found, verificacao = false;
-	int igual;	
+	int igual,iguald;	
 	if( (arquivo = fopen("veiculo.dat","r+b"))==NULL){
 		printf("Erro ao abrir arquivo cliente.dat.\n");
 		system("pause");
@@ -96,7 +174,8 @@ bool VALIDAVEICULOLOC(char placa[9]){
 		if(fread(&veiculo,sizeof(struct Veiculo),1, arquivo) == 1){
 			//substring = strstr(strupr(veiculo.placa),strupr(placa));
 			igual = stricmp(placa,strtok(veiculo.placa,"\n"));
-		if (igual == 0){
+			iguald = stricmp("disponivel",strtok(veiculo.cpfcliente,"\n"));
+		if ((igual == 0) && (iguald == 0) ){
 				verificacao = true;
 				break;
 			}			 
@@ -155,19 +234,39 @@ void LOCARVEICULO(){
 		switch(op){
 			case 1:
 				strcpy(categoria,"economica");
-				EXIBIRCLIENTELOC(categoria);
+				if (EXIBIRCLIENTELOC(categoria) < 1){
+					system("cls");
+					printf("Nao ha carros disponiveis\n");
+					system("pause");
+					return;
+				}
 				break;
 			case 2:
 				strcpy(categoria,"intermediaria");
-				EXIBIRCLIENTELOC(categoria);
+				if (EXIBIRCLIENTELOC(categoria) < 1){
+					system("cls");
+					printf("Nao ha carros disponiveis\n");
+					system("pause");
+					return;
+				}
 				break;
 			case 3:
 				strcpy(categoria,"luxo");
-				EXIBIRCLIENTELOC(categoria);
+				if (EXIBIRCLIENTELOC(categoria) < 1){
+					system("cls");
+					printf("Nao ha carros disponiveis\n");
+					system("pause");
+					return;
+				}
 				break;
 			case 4:
 				strcpy(categoria,"todos");
-				EXIBIRCLIENTELOC(categoria);
+				if (EXIBIRCLIENTELOC(categoria) < 1){
+					system("cls");
+					printf("Nao ha carros disponiveis\n");
+					system("pause");
+					return;
+				}
 				break;
 			default:
 				system("cls");
@@ -314,7 +413,7 @@ void EXIBIRCLIENTE(int opcao){
 	getch();
 }
 
-void EXIBIRCLIENTELOC(char categoria[15]){
+int EXIBIRCLIENTELOC(char categoria[15]){
 	int reg;
 	char nome[100], cpf[15], modelo[20], placa[9];
 	struct Cliente cliente;
@@ -379,7 +478,7 @@ void EXIBIRCLIENTELOC(char categoria[15]){
 	}
 	printf ("\n#####################\n");	
 	fclose(arquivo);
-	//getch();
+	return reg;
 }
 
 void MOSTRAR_DISPONIVEIS(){
@@ -816,16 +915,6 @@ void CADASTRARCLIENTE(){
 	}	
 }
 
-/*###################################################*/
-
-
-/*###################################################*/
-
-void DEVOLUCAO(){
-	printf("devolucao");
-}
-
-
 /*############################# VALIDA DATA ############################# */  
 
 int VALIDA_DATA(int dia, int mes, int ano)
@@ -859,17 +948,9 @@ int VALIDA_DATA(int dia, int mes, int ano)
            }
 }
 
-int CALCULARDIAS() {
+int CALCULARDIAS(Data_2 dt_ini, Data_2 dt_fim) {
 	Data_2 dia1, dia2;
-
-	printf("Coloque data incial no formato: dia/mes/ano\n");
-	scanf("%d/%d/%d", &dia1.dia, &dia1.mes, &dia1.ano);
-	printf("Coloque data final no formato: dia/mes/ano\n");
-	scanf("%d/%d/%d", &dia2.dia, &dia2.mes, &dia2.ano);
-	
-	//printf("A distancia em dias: %lu\n", dist_dias (dia1, dia2));
-
-	return dist_dias (dia1, dia2);
+	return dist_dias (dt_ini, dt_fim);
 }
 int BISSEXTO (int ano) {
 	return (ano % 4 == 0) && ((ano % 100 != 0) || (ano % 400 == 0));
