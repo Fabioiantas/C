@@ -37,15 +37,18 @@ void MENUCONSULTA();
 void MOSTRARTODOS();
 void EXIBIRCLIENTE(int opcao);
 void LOCARVEICULO();
-int EXIBIRCLIENTELOC(char categoria[15]);
 bool VALIDACLIENTE(char cpf[15]);
 bool VALIDAVEICULOLOC(char placa[9]);
-////void MOSTRAR_DISPONIVEIS();
+bool ATUALIZARVEICULODEVOLUCAO(char placa[9],char cpf[15]);
 void MOSTRAR_POR_CATEGORIA(int op);
+int EXIBIRCLIENTELOC(char categoria[15]);
 int VALIDA_DATA(int dia, int mes, int ano);
 int CALCULARDIAS(date dt_ini, date dt_fim);
+int VERIFICAATRASO(char placa[9], Data_2 dt_dev);
 int BISSEXTO (int ano);
 float VALORTOTAL(char placa[9]);
+float VALORTOTALATRASO(char placa[9],Data_2 dt_dev);
+
 /*############################# STRUCTS! ############################# */
 
 
@@ -81,10 +84,61 @@ int main(){
 }
 
 /*############################# PROCEDURES ############################# */
+
+bool ATUALIZARVEICULODEVOLUCAO(char placa[9],char cpf[15]){
+	struct Veiculo veiculo;
+	date dt_ini;
+	date dt_fim;
+	char *substring;
+	bool verificacao = false;
+	int  cont = 0;
+	int  valida,op;
+	bool continuar = true;
+	
+	if( (arquivo = fopen("veiculo.dat","r+b"))==NULL){
+		printf("Erro ao abrir arquivo cliente.dat.\n");
+		system("pause");
+		exit(1);
+	}
+	while(!feof(arquivo)){
+		if(fread(&veiculo,sizeof(struct Veiculo),1, arquivo) == 1){
+			substring = strstr(strupr(veiculo.placa),strupr(placa));
+		if (substring != NULL){
+				verificacao = true;
+				break;
+			}			 
+		}
+		cont++;
+	}
+	if (!verificacao){
+		printf("\nVeiculo nao encontrado => %d.",cont);
+	}else{
+		strcpy(veiculo.cpfcliente,cpf);
+		
+		veiculo.dt_ini.dia = NULL;
+		veiculo.dt_ini.mes = NULL;
+		veiculo.dt_ini.ano = NULL;
+		
+		veiculo.dt_fim.dia = NULL;
+		veiculo.dt_fim.mes = NULL;
+		veiculo.dt_fim.ano = NULL;
+		
+		fseek(arquivo, sizeof(struct Veiculo) * cont, SEEK_SET);
+		fwrite(&veiculo, sizeof(struct Veiculo), 1, arquivo);
+		printf("\nAtualizado com sucesso pressione qualquer tecla para continuar\n\n.");
+		getch();
+	}
+	fclose(arquivo);	
+	return verificacao;
+}
+
 void DEVOLUCAO(){
 	int op;
 	float total;
 	char placa[9];
+	char cpf[15];
+	Data_2 dt_dev;
+	int atraso;
 	printf("Informe a Opcao: \n\n\t1- INFORMAR PLACA\n\t2- MOSTRAR TODOS EM USO \n\t3- INFORMAR CPF\n");
 	scanf("%d",&op);
 	switch(op){
@@ -98,10 +152,32 @@ void DEVOLUCAO(){
 				system("pause");
 				return;
 			}else{
-				//system("cls");
-				printf("total: %f",VALORTOTAL(placa));
-				system("pause");
-				return;
+				printf("Informe a data de Devolucao no formato: dia/mes/ano\n");
+				scanf("%d/%d/%d", &dt_dev.dia, &dt_dev.mes, &dt_dev.ano);
+				atraso = VERIFICAATRASO(placa,dt_dev);
+				if (atraso > 0){
+					printf("Total: %f\n",VALORTOTAL(placa));
+					printf("Multa por %d dia de atraso = %f\n",atraso,VALORTOTALATRASO(placa,dt_dev));
+					printf("Total com Multa: %f\n ",VALORTOTAL(placa)+VALORTOTALATRASO(placa,dt_dev));
+					strcpy(cpf,"disponivel");
+					if(!ATUALIZARVEICULODEVOLUCAO(placa,cpf)){
+						system("cls");
+						printf("Erro ao devolver veiculo/");
+						system("pause");
+						exit(0);
+					}
+					return;
+				}else{
+					printf("Total: %f\n",VALORTOTAL(placa));
+					system("pause");
+					if(!ATUALIZARVEICULODEVOLUCAO(placa,cpf)){
+						system("cls");
+						printf("Erro ao devolver veiculo/");
+						system("pause");
+						exit(0);
+					}
+					return;
+				}
 			}
 			break;
 		case 2:
@@ -113,7 +189,32 @@ void DEVOLUCAO(){
 	}
 }
 
-float VALORTOTAL(char placa[9]){
+int VERIFICAATRASO(char placa[9], Data_2 dt_dev){
+	struct Veiculo veiculo;
+	int igual;	
+	Data_2 dt_f;
+	int dias = 0;
+	if( (arquivo = fopen("veiculo.dat","r+b"))==NULL){
+		printf("Erro ao abrir arquivo cliente.dat.\n");
+		system("pause");
+		exit(1);
+	}
+	while(!feof(arquivo)){
+		if(fread(&veiculo,sizeof(struct Veiculo),1, arquivo) == 1){
+			igual = stricmp(placa,strtok(veiculo.placa,"\n"));
+			if (igual == 0){
+				dt_f.dia = veiculo.dt_fim.dia;
+				dt_f.mes = veiculo.dt_fim.mes;
+				dt_f.ano = veiculo.dt_fim.ano;
+				dias = dist_dias(dt_f,dt_dev);
+			}			 
+		}
+	}
+	return dias;
+}
+
+float VALORTOTALATRASO(char placa[9], Data_2 dt_dev){
+	
 	float valor = 0;
 	int reg;
 	struct Veiculo veiculo;
@@ -124,6 +225,7 @@ float VALORTOTAL(char placa[9]){
 	Data_2 dt_i, dt_f;
 	float diaria;
 	int dias;
+
 	if( (arquivo = fopen("veiculo.dat","r+b"))==NULL){
 		printf("Erro ao abrir arquivo cliente.dat.\n");
 		system("pause");
@@ -141,6 +243,53 @@ float VALORTOTAL(char placa[9]){
 					diaria = 289.90;
 				}else
 					diaria = 0;
+					
+			    dt_f.dia = veiculo.dt_fim.dia;
+				dt_f.mes = veiculo.dt_fim.mes;
+				dt_f.ano = veiculo.dt_fim.ano;
+				dias = dist_dias(dt_f,dt_dev);	
+				
+				diaria = diaria * 2;			
+				
+				valor = dias * diaria;
+				
+				break;
+			}			 
+		}
+	}
+	return valor;
+}
+
+float VALORTOTAL(char placa[9]){
+	float valor = 0;
+	int reg;
+	struct Veiculo veiculo;
+	char categoria[15];
+	char *substring;
+	bool found, verificacao = false;
+	int igual,iguald;	
+	Data_2 dt_i, dt_f;
+	float diaria;
+	int dias;
+
+	if( (arquivo = fopen("veiculo.dat","r+b"))==NULL){
+		printf("Erro ao abrir arquivo cliente.dat.\n");
+		system("pause");
+		exit(1);
+	}
+	while(!feof(arquivo)){
+		if(fread(&veiculo,sizeof(struct Veiculo),1, arquivo) == 1){
+			igual = stricmp(placa,strtok(veiculo.placa,"\n"));
+			if (igual == 0){
+				if(stricmp("economica",strtok(veiculo.categoria,"\n")) == 0){
+					diaria = 89.90;
+				}else if(stricmp("intermediaria",strtok(veiculo.categoria,"\n")) == 0){
+					diaria = 174.90;
+				}else if(stricmp("luxo",strtok(veiculo.categoria,"\n")) == 0){
+					diaria = 289.90;
+				}else
+					diaria = 0;
+					
 				dt_i.dia = veiculo.dt_ini.dia;
 				dt_i.mes = veiculo.dt_ini.mes;
 				dt_i.ano = veiculo.dt_ini.ano;
@@ -148,9 +297,7 @@ float VALORTOTAL(char placa[9]){
 				dt_f.dia = veiculo.dt_fim.dia;
 				dt_f.mes = veiculo.dt_fim.mes;
 				dt_f.ano = veiculo.dt_fim.ano;
-				dias = dist_dias(dt_i,dt_f);
-				system("cls");
-				printf("dias: %d",dias);
+				dias = dist_dias(dt_i,dt_f);				
 				valor = dias * diaria;
 				break;
 			}			 
@@ -158,6 +305,7 @@ float VALORTOTAL(char placa[9]){
 	}
 	return valor;
 }
+
 bool VALIDAVEICULOLOC(char placa[9]){
 	int reg;
 	struct Veiculo veiculo;
@@ -319,6 +467,7 @@ void LOCARVEICULO(){
 		}
 		cont++;
 	}
+	printf("=> %d\n",cont);
 	if (!verificacao){
 		printf("\nVeiculo nao encontrado => %d.",cont);
 	}else{
@@ -338,11 +487,6 @@ void LOCARVEICULO(){
 		getch();
 	}
 	fclose(arquivo);	
-}
-
-void LOCACAO(){
-	printf("locacao");
-	getch();
 }
 
 void EXIBIRCLIENTE(int opcao){
@@ -603,6 +747,7 @@ void MENUCONSULTARVEICULO(){
 			return;
 	}
 }
+
 void MENUCONSULTARCLIENTE(){
 	int opcao;
 	int opcao2;
@@ -669,9 +814,6 @@ void MENU(){
 	}
 }
 
-
-/*###################################################*/
-
 void MOSTRARTODOS(){
 	
 	int reg;
@@ -715,6 +857,7 @@ void MOSTRARTODOS(){
 	fclose(arquivo);
 	getch();
 }
+
 void CONSULTARVEICULO(){
     struct Veiculo carro[100];
     int i = 0;
@@ -739,8 +882,6 @@ void CONSULTARVEICULO(){
 	fclose(arquivo);
 	getch();
 }
-
-/*###################################################*/
 
 void CADASTRARVEICULO(){
    struct Veiculo carro;
@@ -834,7 +975,6 @@ void CADASTRARVEICULO(){
 		fclose(arquivo);
 	}
 }
-/*###################################################*/
 
 void CADASTRARCLIENTE(){
 	struct Cliente cliente;
@@ -952,6 +1092,7 @@ int CALCULARDIAS(Data_2 dt_ini, Data_2 dt_fim) {
 	Data_2 dia1, dia2;
 	return dist_dias (dt_ini, dt_fim);
 }
+
 int BISSEXTO (int ano) {
 	return (ano % 4 == 0) && ((ano % 100 != 0) || (ano % 400 == 0));
 }
