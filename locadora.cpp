@@ -40,11 +40,13 @@ void LOCARVEICULO();
 bool VALIDACLIENTE(char cpf[15]);
 bool VALIDAVEICULOLOC(char placa[9]);
 bool ATUALIZARVEICULODEVOLUCAO(char placa[9],char cpf[15]);
+bool VALIDADEVOLUCAO();
 void MOSTRAR_POR_CATEGORIA(int op);
 int EXIBIRCLIENTELOC(char categoria[15]);
 int VALIDA_DATA(int dia, int mes, int ano);
 int CALCULARDIAS(date dt_ini, date dt_fim);
 int VERIFICAATRASO(char placa[9], Data_2 dt_dev);
+int EXIBIRVEICULOSLOCADOS();
 int BISSEXTO (int ano);
 float VALORTOTAL(char placa[9]);
 float VALORTOTALATRASO(char placa[9],Data_2 dt_dev);
@@ -125,11 +127,57 @@ bool ATUALIZARVEICULODEVOLUCAO(char placa[9],char cpf[15]){
 		
 		fseek(arquivo, sizeof(struct Veiculo) * cont, SEEK_SET);
 		fwrite(&veiculo, sizeof(struct Veiculo), 1, arquivo);
-		printf("\nAtualizado com sucesso pressione qualquer tecla para continuar\n\n.");
+		printf("\nAtualizado com sucesso pressione qualquer tecla para continuar.\n");
 		getch();
 	}
 	fclose(arquivo);	
 	return verificacao;
+}
+
+bool VALIDADEVOLUCAO(){
+	char placa[9];
+	char cpf[15];
+	bool ret = true;
+	Data_2 dt_dev;
+	int atraso;
+	
+	printf("Informe a placa: ");
+	fflush(stdin);
+	fgets(placa,10,stdin);
+	if(VALIDAVEICULOLOC(strtok(placa,"\n"))){
+		system("cls");
+		printf("Veiculo nao cadastrado ou nao esta em uso.\n");
+		system("pause");
+		return false;
+	}else{
+		printf("Informe a data de Devolucao no formato: dia/mes/ano\n");
+		scanf("%d/%d/%d", &dt_dev.dia, &dt_dev.mes, &dt_dev.ano);
+		atraso = VERIFICAATRASO(placa,dt_dev);
+		if (atraso > 0){
+			printf("Total: %f\n",VALORTOTAL(placa));
+			printf("Multa por %d dia de atraso = %f\n",atraso,VALORTOTALATRASO(placa,dt_dev));
+			printf("Total com Multa: %f\n ",VALORTOTAL(placa)+VALORTOTALATRASO(placa,dt_dev));
+			strcpy(cpf,"disponivel");
+			if(!ATUALIZARVEICULODEVOLUCAO(placa,cpf)){
+				ret = false;
+				system("cls");
+				printf("Erro ao devolver veiculo/");
+				system("pause");
+				exit(0);
+			}
+		}else{
+			printf("Total: %f\n",VALORTOTAL(placa));
+			system("pause");
+			if(!ATUALIZARVEICULODEVOLUCAO(placa,cpf)){
+				ret = false;
+				system("cls");
+				printf("Erro ao devolver veiculo/");
+				system("pause");
+				exit(0);
+			}
+		}
+	return ret;
+	}
 }
 
 void DEVOLUCAO(){
@@ -139,7 +187,7 @@ void DEVOLUCAO(){
 	char cpf[15];
 	Data_2 dt_dev;
 	int atraso;
-	printf("Informe a Opcao: \n\n\t1- INFORMAR PLACA\n\t2- MOSTRAR TODOS EM USO \n\t3- INFORMAR CPF\n");
+	printf("--------------------------DEVOLUCAO DE VEICULO--------------------------\nInforme a Opcao: \n\n\t1- INFORMAR PLACA\n\t2- MOSTRAR TODOS EM USO \n\t3- INFORMAR CPF\n");
 	scanf("%d",&op);
 	switch(op){
 		case 1:
@@ -181,7 +229,11 @@ void DEVOLUCAO(){
 			}
 			break;
 		case 2:
-			NULL;
+			if (EXIBIRVEICULOSLOCADOS() < 1){
+				system("cls");
+				printf("Nao ha veiculos Locados.");
+			}else
+				VALIDADEVOLUCAO();
 			break;
 		case 3:
 			NULL;
@@ -354,7 +406,6 @@ bool VALIDACLIENTE(char cpf[15]){
 			//substring = strstr(strupr(cliente.cpf),strupr(cpf));
 			igual = stricmp(cpf,strtok(cliente.cpf,"\n"));
 		if (igual == 0){
-				system("pause");
 				verificacao = true;
 				break;
 			}			 
@@ -467,7 +518,6 @@ void LOCARVEICULO(){
 		}
 		cont++;
 	}
-	printf("=> %d\n",cont);
 	if (!verificacao){
 		printf("\nVeiculo nao encontrado => %d.",cont);
 	}else{
@@ -483,7 +533,7 @@ void LOCARVEICULO(){
 		
 		fseek(arquivo, sizeof(struct Veiculo) * cont, SEEK_SET);
 		fwrite(&veiculo, sizeof(struct Veiculo), 1, arquivo);
-		printf("\nAtualizado com sucesso pressione qualquer tecla para continuar\n\n.");
+		printf("\nAtualizado com sucesso pressione qualquer tecla para continuar.\n");
 		getch();
 	}
 	fclose(arquivo);	
@@ -570,7 +620,7 @@ int EXIBIRCLIENTELOC(char categoria[15]){
 	// posiciona o arquivo no inicio
 	fseek(arquivo,0,SEEK_SET);	
 	reg=0;
-	printf ("-----------Clientes Cadastrados------------------\n");
+	printf ("---------------------- Clientes Cadastrados ----------------------------------------\n");
 	do {
 		// le registro
 		fread(&cliente, sizeof(struct Cliente), 1, arquivo);
@@ -595,7 +645,7 @@ int EXIBIRCLIENTELOC(char categoria[15]){
 	// posiciona o arquivo no inicio
 	fseek(arquivo,0,SEEK_SET);
 	reg=0;
-	printf ("\n########### Veiculos Disponiveis - %s ###########\n\n",categoria);
+	printf ("\n---------------------------------------- Veiculos Disponiveis - %s ----------------------------------------\n\n",categoria);
 	while(!feof(arquivo)){
 		// le registro
 		fread(&carro, sizeof(struct Veiculo), 1, arquivo);		
@@ -620,9 +670,46 @@ int EXIBIRCLIENTELOC(char categoria[15]){
 			printf (" | PLACA: %s\n",placa);
 		}
 	}
-	printf ("\n#####################\n");	
+	printf ("\n------------------------------------------------------------------------------------------------------------------------\n");	
 	fclose(arquivo);
 	return reg;
+}
+
+int EXIBIRVEICULOSLOCADOS(){
+	int reg;
+	struct Veiculo carro;
+	char nome[100], cpf[15], modelo[20], placa[9];
+	
+	if((arquivo = fopen("veiculo.dat","rb")) == NULL){
+		printf("ERRO AO ABRIR ARQUIVO");
+		system("pause");
+		exit(0);
+	}
+	// posiciona o arquivo no inicio
+	fseek(arquivo,0,SEEK_SET);
+	reg=0;
+	printf ("\n-------------------------- Veiculos Locados --------------------------\n\n");
+	while(!feof(arquivo)){
+		// le registro
+		fread(&carro, sizeof(struct Veiculo), 1, arquivo);		
+		// se chegou ao fim, para
+		if (feof(arquivo)) break;
+		// mostra dados
+		if (strcmp ("disponivel",carro.cpfcliente) != 0){
+			reg++;
+			strcpy(modelo,carro.modelo);
+			strcpy(placa,carro.placa);
+			strtok(modelo,"\n");
+			strtok(placa,"\n");
+			printf ("%d -> MODELO: %s",reg,modelo);
+			printf (" | PLACA: %s",placa);
+			printf (" | CPF: %s\n",carro.cpfcliente);
+	}
+	printf ("\n----------------------------------------------------\n");	
+	fclose(arquivo);
+	getch();
+	return reg;
+	}
 }
 
 void MOSTRAR_DISPONIVEIS(){
@@ -694,7 +781,7 @@ void MOSTRAR_POR_CATEGORIA(int op){
 	reg=0;
 	do {
 		// le registro
-		fread(&carro, sizeof(struct Veiculo), 1, arquivo);		
+		fread(&carro, sizeof(struct Veiculo), 1, arquivo);	 	
 		// se chegou ao fim, para
 		if (feof(arquivo)) break;
 		// mostra dados
@@ -714,6 +801,8 @@ void MOSTRAR_POR_CATEGORIA(int op){
 			reg++;
 		}
 	} while(!feof(arquivo)); // repete enquanto nao chegar ao fim
+	if(reg == 0)
+		printf("Nao ha Veiculos Cadastrados. %d",reg);
 	fclose(arquivo);
 	getch();
 }
@@ -854,6 +943,8 @@ void MOSTRARTODOS(){
 		
 		reg++;
 	} while(!feof(arquivo)); // repete enquanto nao chegar ao fim
+	if (reg == 0)
+		printf("Nao ha veiculos cadastrados.\n");
 	fclose(arquivo);
 	getch();
 }
